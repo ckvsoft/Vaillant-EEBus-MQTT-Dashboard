@@ -56,37 +56,34 @@ class FileFormatter(logging.Formatter):
 
 
 class Logger:
-    """Custom Logger Klasse für eine einheitliche Log-Ausgabe"""
-
     def __init__(self, log_dir="logs", log_filename="app.log", level=logging.DEBUG):
-        # Basisverzeichnis der App bestimmen (Root der Anwendung)
-        app_root = os.path.abspath(os.getcwd())  # Root der App, wo das Skript gestartet wird
-        log_path = os.path.join(app_root, log_dir)  # Log-Verzeichnis im App-Root
+        app_root = os.path.abspath(os.getcwd())
+        log_path = os.path.join(app_root, log_dir)
 
-        # Falls das Verzeichnis nicht existiert, erstellen
         if not os.path.exists(log_path):
             os.makedirs(log_path)
 
-        log_file = os.path.join(log_path, log_filename)  # Vollständiger Pfad zur Log-Datei
+        # English comment: Always set the log_file path so get_log_file() works
+        self.log_file = os.path.join(log_path, log_filename)
 
         self.logger = logging.getLogger('custom_logger')
         self.logger.setLevel(level)
 
-        # Logdatei mit Rotation (ohne Farben)
-        file_handler = RotatingFileHandler(log_file, mode='a', maxBytes=5 * 1024 * 1024, backupCount=2,
-                                           encoding="utf-8", delay=False)
-        file_handler.setFormatter(FileFormatter())
-        file_handler.setLevel(level)
+        # English comment: Only add handlers if they haven't been added yet
+        if not self.logger.handlers:
+            # File Handler
+            file_handler = RotatingFileHandler(self.log_file, mode='a', maxBytes=5 * 1024 * 1024,
+                                               backupCount=2, encoding="utf-8", delay=False)
+            file_handler.setFormatter(FileFormatter())
+            file_handler.setLevel(level)
 
-        # Konsolenausgabe (mit Farben)
-        console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setFormatter(ConsoleFormatter())
-        console_handler.setLevel(level)
+            # Console Handler
+            console_handler = logging.StreamHandler(sys.stdout)
+            console_handler.setFormatter(ConsoleFormatter())
+            console_handler.setLevel(level)
 
-        # Handler hinzufügen
-        self.logger.addHandler(file_handler)
-        self.logger.addHandler(console_handler)
-        self.log_file = log_file  # Speichern des Logfile-Pfads
+            self.logger.addHandler(file_handler)
+            self.logger.addHandler(console_handler)
 
     def get_logger(self):
         return self.logger

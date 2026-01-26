@@ -25,6 +25,46 @@
       ],
       "isInteger": "true"
     },
+    "ebusd/hmu/SourcePressure": {
+      "type": "gauge",
+      "value": 0.0,
+      "range": [
+        0,
+        4
+      ],
+      "title": "Soledruck",
+      "color_ranges": [
+        {
+          "range": [
+            0,
+            1
+          ],
+          "color": "red"
+        },
+        {
+          "range": [
+            1,
+            2
+          ],
+          "color": "green"
+        },
+        {
+          "range": [
+            2,
+            3
+          ],
+          "color": "orange"
+        },
+        {
+          "range": [
+            3,
+            4
+          ],
+          "color": "red"
+        }
+      ],
+      "isInteger": "false"
+    },
     "ebusd/700/WaterPressure": {
       "type": "gauge",
       "value": 0.0,
@@ -235,6 +275,18 @@
       ],
       "isInteger": "false"
     },
+    "ebusd/hmu/CurrentConsumedPower": {
+      "type": "text",
+      "value": "N/A",
+      "title": "Momentaner Leistungsverbrauch in kW",
+      "data_type": "string"
+    },
+    "ebusd/hmu/LiveMonitorCurrentYieldPower": {
+      "type": "text",
+      "value": "N/A",
+      "title": "Momentane Heizleistung in kW",
+      "data_type": "string"
+    },
     "ebusd/hmu/HoursHc": {
       "type": "text",
       "value": "N/A",
@@ -264,5 +316,14 @@
       "value": "off",
       "title": "Wärmepumpe Status"
     }
-  }
+  },
+  "ebus_polling": [
+      {"circuit": "hmu", "name": "CompressorStarts"},
+      {"circuit": "hmu", "name": "State"},
+      {"circuit": "hmu", "name": "SourcePressure"},
+      {"circuit": "omu", "name": "DeicingActive"},
+      {"circuit": "omu", "name": "Defroster"},
+      {"circuit": "hmu", "name": "CurrentConsumedPower"},
+      {"circuit": "hmu", "name": "LiveMonitorCurrentYieldPower"}
+  ]
 }

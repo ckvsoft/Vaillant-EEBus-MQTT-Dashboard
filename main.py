@@ -1,9 +1,5 @@
+
 import re
-
-import eventlet
-
-eventlet.monkey_patch()  # Muss zuerst kommen!
-
 import threading
 import paho.mqtt.client as mqtt
 from flask import Flask, render_template, send_from_directory, Response
@@ -13,13 +9,15 @@ import time
 import json
 import os
 
+from core.deicingtracker import DeicingTracker
 from core.log import Logger
+from core.ebusdirect import EbusDirect
 
 # Flask App initialisieren
 app = Flask(__name__, static_url_path='/js', static_folder='js', template_folder='templates')
-socketio = SocketIO(app)
-# Logger initialisieren
+socketio = SocketIO(app, async_mode="threading")
 
+# Logger initialisieren
 logger_instance = Logger(log_filename="vaillant2.log")  # Erstelle das Logger-Objekt
 LOG_FILE_PATH = logger_instance.get_log_file()  # Hole den Logfile-Pfad direkt von der Logger-Instanz
 
@@ -105,7 +103,7 @@ def on_message(_client, _userdata, msg):
                             start_time = float(topic_config["start_time"])
                             now = datetime.now()
                             elapsed = (now.timestamp() - start_time) / 3600  # Stunden
-                            update_runtime(elapsed)
+                            update_runtime(elapsed, start_time)
 
                             runtime["total"] += elapsed
                             hwc["switch"] = True
@@ -116,7 +114,6 @@ def on_message(_client, _userdata, msg):
                         # Zähler nicht hochzählen, wenn ein direkter wechsel war. Das zählt nicht als Kompressor start
                         if not hwc["switch"]:
                             counter["today"] += 1
-                            counter["total"] += 1
                             c = counter.get("today")
                             log.info(f"start run {c} - {status}")
 
@@ -130,7 +127,7 @@ def on_message(_client, _userdata, msg):
                             start_time = float(topic_config["start_time"])
                             now = datetime.now()
                             elapsed = (now.timestamp() - start_time) / 3600
-                            update_runtime(elapsed)
+                            update_runtime(elapsed, start_time)
 
                             runtime["total"] += elapsed
                             topic_config["start_time"] = ""
@@ -140,6 +137,7 @@ def on_message(_client, _userdata, msg):
                             log.info(f"stop run {c} - {status} - elapsed: {elapsed}")
 
 
+                    counter["total"] = ebus.read_value('hmu', 'CompressorStarts')
                     socketio.emit('update_led', {
                         'title': title,
                         'value': status,
@@ -169,7 +167,10 @@ def on_message(_client, _userdata, msg):
         log.error(f"Fehler beim Verarbeiten von {topic}: {payload} -> {e}")
         log.error(runtime["runs"])
 
-def update_runtime(elapsed):
+def update_runtime(elapsed, start_time):
+    timestamp = float(start_time)
+    dt = datetime.fromtimestamp(timestamp)
+    time_str = dt.strftime("%H:%M")
     cnt = counter.get("today", 0)
     if cnt == 0 and elapsed > 0.0:
         runtime["yesterday"] += elapsed
@@ -316,12 +317,8 @@ def update_log():
         yield from read_entire_log_file()
         # Danach nur neue Logzeilen (wie tail -f)
         yield from read_log_file()
-    headers = {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        "X-Accel-Buffering": "no"  # Bei Verwendung von Nginx
-    }
-    return Response(stream_logs(), headers=headers)
+
+    return Response(stream_logs(), content_type='text/event-stream')
 
 @app.route('/logger')
 def logger():
@@ -365,6 +362,11 @@ def index():
                 "value": value,
                 'start_time': str(mqtt_values[topic].get("start_time", ""))
             })
+            leds.append({
+                "title": "Deicing",
+                "value": "on" if deicing_tracker.active else "off",
+                "start_time": deicing_tracker.start_time
+            })
 
     rt = {
         "today": format_runtime(runtime.get("today", 0)),
@@ -401,18 +403,23 @@ def format_runs(runs):
 
     return ', '.join(formatted_runs)
 
+def ebus_dispatcher(circuit, name, value):
+    log.info(f"🔥 DISPATCHER: {circuit} {name} = {value}")
+
+    handler = EBUS_HANDLERS.get((circuit, name))
+    if handler:
+        handler(value)
 
 config = load_config()
 mqtt_config = config.get("mqtt_config", {})
-mqtt_client = mqtt.Client(protocol=mqtt.MQTTv5)
+mqtt_client = mqtt.Client( protocol=mqtt.MQTTv5, callback_api_version=mqtt.CallbackAPIVersion.VERSION2)
 mqtt_client.on_connect = on_connect
 mqtt_client.on_message = on_message
-if mqtt_config.get("username", None) is not None:
-    mqtt_client.username_pw_set(mqtt_config.get("username"), mqtt_config.get("password", ""))
-mqtt_client.connect(mqtt_config.get("host", "localhost"), mqtt_config.get("port", 1883), 60)
 
 if __name__ == '__main__':
+    print(f"PROCESS START: {os.getpid()}")
     hwc = {"status": False, "switch": False, "sub": 0}
+    defrost = {"status": False}
 
     # Zähler für "on" und "hwc"
     runtime = load_values("runtime.json")
@@ -438,6 +445,22 @@ if __name__ == '__main__':
     # Zugriff auf die MQTT-Werte mit Typen und anderen Informationen
     mqtt_values = config.get("mqtt_values", {})
 
+    if mqtt_config.get("username", None) is not None:
+        mqtt_client.username_pw_set(mqtt_config.get("username"), mqtt_config.get("password", ""))
+    mqtt_client.connect(mqtt_config.get("host", "localhost"), mqtt_config.get("port", 1883), 60, clean_start=mqtt.MQTT_CLEAN_START_FIRST_ONLY)
+
+    # Start the poller thread with the list from config
+    ebus_polling_list = config.get("ebus_polling", [])
+    ebus = EbusDirect()
+    deicing_tracker = DeicingTracker(ebus, socketio)
+
+    EBUS_HANDLERS = {
+        ("omu", "DeicingActive"): deicing_tracker.update
+    }
+
+    threading.Thread(target=ebus.ebus_poller, args=(config["ebus_polling"], ebus_dispatcher), daemon=True).start()
+    counter["total"] = ebus.read_value('hmu', 'CompressorStarts')
+
     threading.Thread(target=reset_counter, daemon=True).start()
-    threading.Thread(target=mqtt_client.loop_forever, daemon=True).start()
-    socketio.run(app, debug=False, host='0.0.0.0', port=5000, use_reloader=False, log_output=True)
+    threading.Thread(target=mqtt_client.loop_forever,daemon=True).start()
+    socketio.run(app, debug=False, host='0.0.0.0', port=5000, use_reloader=False, log_output=True,allow_unsafe_werkzeug=True)
