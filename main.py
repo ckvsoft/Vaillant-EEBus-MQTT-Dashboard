@@ -168,24 +168,28 @@ def on_message(_client, _userdata, msg):
         log.error(runtime["runs"])
 
 def update_runtime(elapsed, start_time):
+    """Aktualisiert die Laufzeiten sauber mit Startzeit [hh:mm] und elapsed Stunden."""
     timestamp = float(start_time)
     dt = datetime.fromtimestamp(timestamp)
-    time_str = dt.strftime("%H:%M")
+    time_str = dt.strftime("%H:%M")  # hh:mm Format
+
     cnt = counter.get("today", 0)
-    if cnt == 0 and elapsed > 0.0:
-        runtime["yesterday"] += elapsed
-        run_id = str(counter.get("yesterday", 1))
-        sub_id = hwc.get("sub", 0)
-        if sub_id > 0:
-            run_id = f"{run_id}.{sub_id}"
-        runtime["runs"]["yesterday"][run_id] = f"hwc: {elapsed}" if hwc["status"] else elapsed
-    else:
-        runtime["today"] += elapsed
-        run_id = str(cnt)
-        sub_id = hwc.get("sub", 0)
-        if sub_id > 0:
-            run_id = f"{run_id}.{sub_id}"
-        runtime["runs"]["today"][run_id] = f"hwc: {elapsed}" if hwc["status"] else elapsed
+    sub_id = hwc.get("sub", 0)
+    run_id = str(cnt if cnt > 0 else counter.get("yesterday", 1))
+    if sub_id > 0:
+        run_id = f"{run_id}.{sub_id}"
+
+    # Bestimme Zieltag
+    target_day = "yesterday" if cnt == 0 and elapsed > 0 else "today"
+    runtime["runs"].setdefault(target_day, {})
+    runtime["runs"][target_day][run_id] = {
+        "time": time_str,
+        "elapsed_hours": elapsed,
+        "hwc": hwc["status"]
+    }
+
+    # Gesamtstunden addieren
+    runtime[target_day] += elapsed
 
     hwc["status"] = False
 
@@ -382,24 +386,32 @@ def format_runtime(hours):
     total_minutes = int(hours * 60)
     return f"{total_minutes // 60} Std {total_minutes % 60} Min"
 
-
 def format_runs(runs):
     formatted_runs = []
     for key, value in runs.items():
-        if isinstance(value, str) and value.startswith("hwc:"):
-            # Wenn der Wert mit hwc: beginnt, extrahiere die Zeit und füge HWC hinzu
-            try:
-                elapsed_time = float(value.split(":")[1].strip())
-                minutes = int(elapsed_time * 60)
-                seconds = int((elapsed_time * 3600) % 60)
-                formatted_runs.append(f'{key}: HWC {minutes} Min {seconds:02d} Sek')
-            except ValueError:
-                formatted_runs.append(f'{key}: Ungültiger Wert')
-        else:
-            # Normaler Fall, wenn der Wert numerisch ist
-            minutes = int(value * 60)
-            seconds = int((value * 3600) % 60)
-            formatted_runs.append(f'{key}: {minutes} Min {seconds:02d} Sek')
+        try:
+            # neuer Stil: Dict mit "time", "elapsed_hours", "hwc"
+            if isinstance(value, dict):
+                time_str = value.get("time", "??:??")
+                elapsed = float(value.get("elapsed_hours", 0))
+                prefix = "HWC " if value.get("hwc") else ""
+            else:
+                # alter Stil: "hwc:0.5" oder "0.5"
+                if isinstance(value, str) and value.startswith("hwc:"):
+                    elapsed = float(value.split(":")[1].replace(",", ".").strip())
+                    prefix = "HWC "
+                else:
+                    elapsed = float(value)
+                    prefix = ""
+                time_str = "??:??"  # keine Startzeit vorhanden bei alten Daten
+
+            minutes = int(elapsed * 60)
+            seconds = int((elapsed * 3600) % 60)
+            formatted_runs.append(f'{key}: [{time_str}] {prefix}{minutes} Min {seconds:02d} Sek')
+
+        except Exception:
+            # absoluter Fallback, falls etwas anderes kommt
+            formatted_runs.append(f'{key}: Ungültiger Wert')
 
     return ', '.join(formatted_runs)
 
