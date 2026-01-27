@@ -2,13 +2,10 @@ import time
 
 from core.log import Logger
 
-logger_instance = Logger(log_filename="deicingtracker.log")
-LOG_FILE_PATH = logger_instance.get_log_file()
-
-log = logger_instance.get_logger()
-
 class DeicingTracker:
     def __init__(self, ebus, socketio, stop_callback=None):
+        logger_instance = Logger()
+        self.log = logger_instance.get_logger()
         self.prev_status = None
         self.active = False
         self.start_time = None
@@ -28,13 +25,13 @@ class DeicingTracker:
     def start(self, now):
         self.active = True
         self.start_time = now
-        log.info("🧊 Enteisen gestartet")
+        self.log.info("🧊 Enteisen gestartet")
         self.ebus.write_value("700", "OpMode", "0")
         self.socketio.emit("update_led", {"title": "Deicing", "value": "on", "start_time": now})
 
     def stop(self, now):
         duration = now - self.start_time
-        log.info(f"🧊 Enteisen beendet ({duration/60:.1f} min)")
+        self.log.info(f"🧊 Enteisen beendet ({duration/60:.1f} min)")
         self.ebus.write_value("700", "OpMode", "2")
         self.active = False
         self.start_time = None
