@@ -46,8 +46,32 @@ def on_message(_client, _userdata, msg):
             value = topic_config.get("value")
 
             if topic_type == "text":
-                data_type = mqtt_values.get(topic, {}).get("data_type", "string")  # Standard: string
-                if data_type == "float":
+                data_type = mqtt_values.get(topic, {}).get("data_type", "string")
+                payload_str = str(payload)
+
+                # Prüfen auf das Muster split(index, separator, type)
+                match = re.match(r"split\((\d+),\s*'(.+)',\s*(\w+)\)", data_type)
+
+                if match:
+                    index = int(match.group(1))
+                    separator = match.group(2)
+                    sub_type = match.group(3)
+
+                    try:
+                        parts = payload_str.split(separator)
+                        extracted = parts[index].strip()
+
+                        if sub_type == "float":
+                            formatted_value = "{:.2f}".format(float(extracted))
+                        elif sub_type == "int":
+                            formatted_value = str(int(float(extracted)))
+                        else:
+                            formatted_value = extracted
+                    except (ValueError, IndexError):
+                        formatted_value = "N/A"
+
+                # Fallback für deine bisherigen Typen
+                elif data_type == "float":
                     try:
                         formatted_value = "{:.2f}".format(float(payload))
                     except ValueError:
@@ -57,8 +81,8 @@ def on_message(_client, _userdata, msg):
                         formatted_value = str(int(payload))
                     except ValueError:
                         formatted_value = "N/A"
-                else:  # Standard: string
-                    formatted_value = str(payload)
+                else:
+                    formatted_value = payload_str
 
                 if value != formatted_value:
                     topic_config["value"] = formatted_value

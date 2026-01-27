@@ -393,7 +393,7 @@
       "type": "text",
       "value": "N/A",
       "title": "Verdampfer Temperatur",
-      "data_type": "float"
+      "data_type": "split(0, ';', float)"
     },
     "ebusd/hmu/SourceTempOutput": {
       "type": "text",
