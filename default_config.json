@@ -171,14 +171,14 @@
       ],
       "isInteger": "true"
     },
-    "ebusd/700/Hc1ActualFlowTempDesired": {
+    "ebusd/hmu/TargetFlowTemp": {
       "type": "gauge",
       "value": 0.0,
       "range": [
         15,
         45
       ],
-      "title": "FBH VL SOLL",
+      "title": "WP VL Soll",
       "color_ranges": [
         {
           "range": [
@@ -197,14 +197,14 @@
       ],
       "isInteger": "false"
     },
-    "ebusd/700/Hc1FlowTemp": {
+    "ebusd/700/Hc1ActualFlowTempDesired": {
       "type": "gauge",
       "value": 0.0,
       "range": [
         15,
         45
       ],
-      "title": "FBH VL IST",
+      "title": "FBH VL Soll",
       "color_ranges": [
         {
           "range": [
@@ -230,33 +230,7 @@
         15,
         45
       ],
-      "title": "HK VL SOLL",
-      "color_ranges": [
-        {
-          "range": [
-            15,
-            40
-          ],
-          "color": "gray"
-        },
-        {
-          "range": [
-            40,
-            45
-          ],
-          "color": "red"
-        }
-      ],
-      "isInteger": "false"
-    },
-    "ebusd/700/Hc2FlowTemp": {
-      "type": "gauge",
-      "value": 0.0,
-      "range": [
-        15,
-        45
-      ],
-      "title": "HK VL IST",
+      "title": "HK VL Soll",
       "color_ranges": [
         {
           "range": [
@@ -282,7 +256,7 @@
         15,
         45
       ],
-      "title": "BUFFER VL IST",
+      "title": "Puffer VL Ist",
       "color_ranges": [
         {
           "range": [
@@ -308,7 +282,7 @@
         15,
         45
       ],
-      "title": "VL IST",
+      "title": "WP VL Ist",
       "color_ranges": [
         {
           "range": [
@@ -327,14 +301,40 @@
       ],
       "isInteger": "false"
     },
-    "ebusd/hmu/TargetFlowTemp": {
+    "ebusd/700/Hc1FlowTemp": {
       "type": "gauge",
       "value": 0.0,
       "range": [
         15,
         45
       ],
-      "title": "VL SOLL",
+      "title": "FBH VL Ist",
+      "color_ranges": [
+        {
+          "range": [
+            15,
+            40
+          ],
+          "color": "gray"
+        },
+        {
+          "range": [
+            40,
+            45
+          ],
+          "color": "red"
+        }
+      ],
+      "isInteger": "false"
+    },
+    "ebusd/700/Hc2FlowTemp": {
+      "type": "gauge",
+      "value": 0.0,
+      "range": [
+        15,
+        45
+      ],
+      "title": "HK VL Ist",
       "color_ranges": [
         {
           "range": [
