@@ -393,7 +393,7 @@ def index():
             })
             leds.append({
                 "title": "Enteisen",
-                "value": "led" if deicing_tracker.active else "off",
+                "value": "fan" if deicing_tracker.active else "off",
                 "start_time": deicing_tracker.start_time
             })
 
