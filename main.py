@@ -455,6 +455,13 @@ def deicing_stop_callback(duration, start_time):
         "elapsed_hours": duration / 3600
     }
     save_values(runtime, "runtime.json")
+    rt = {
+        "today": format_runtime(runtime.get("today", 0)),
+        "yesterday": format_runtime(runtime.get("yesterday", 0)),
+        "runs_today": format_runs(runtime.get("runs", {}).get("today", {})),
+        "runs_yesterday": format_runs(runtime.get("runs", {}).get("yesterday", {}))
+    }
+    socketio.emit('update_runtime', rt)
 
 config = load_config()
 mqtt_config = config.get("mqtt_config", {})
