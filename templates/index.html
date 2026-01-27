@@ -354,26 +354,33 @@
     });
 
     function timer_logic(ledElement, value, title, start_time) {
-        // Timer-Logik
-        if (value === "on" || value === "hwc") {
+        // Liste der Status-Werte, die einen Timer haben sollen
+        const activeStates = ["on", "hwc", "fan", "run"];
+
+        if (activeStates.includes(value)) {
             if (start_time) {
                 timers[title] = start_time;
-                const timerElement = ledElement.querySelector('.timer');
+                let timerElement = ledElement.querySelector('.timer');
                 if (!timerElement) {
-                    const newTimerElement = document.createElement('span');
-                    newTimerElement.classList.add('timer');
-                    ledElement.appendChild(newTimerElement);
+                    timerElement = document.createElement('span');
+                    timerElement.classList.add('timer');
+                    ledElement.appendChild(timerElement);
                 }
 
-                // Timer jede Sekunde aktualisieren
-                setInterval(() => updateTimer(ledElement, timers[title]), 1000);
+                // Verhindere mehrfache Intervalle auf dem gleichen Element
+                if (!ledElement.dataset.hasInterval) {
+                    setInterval(() => updateTimer(ledElement, timers[title]), 1000);
+                    ledElement.dataset.hasInterval = "true";
+                }
             }
         } else {
+            // Bei 'off' Timer stoppen und entfernen
             delete timers[title];
             const timerElement = ledElement.querySelector('.timer');
             if (timerElement) {
                 timerElement.remove();
             }
+            ledElement.dataset.hasInterval = ""; // Reset für das nächste Mal
         }
     }
 
