@@ -77,7 +77,15 @@
         .led-status.hwc {
             background-color: orange;
         }
+        .led-status.fan {
+            background-color: #00d4ff; /* Hellblau */
+            color: #000; /* Schwarzer Text für bessere Lesbarkeit auf Hellblau */
+        }
 
+        .led-status.run {
+            background-color: #00008b; /* Dunkelblau (DarkBlue) */
+            color: #fff;
+        }
         .gauge-container {
             display: flex;
             flex-wrap: wrap;
@@ -406,20 +414,19 @@
         const ledElement = document.getElementById('led-status-' + title);
 
         if (ledElement) {
-            ledElement.classList.remove('on', 'off', 'hwc');
+            // Entferne alle möglichen Status-Klassen
+            ledElement.classList.remove('on', 'off', 'hwc', 'fan', 'run');
 
-            // Status setzen
-            if (value === "on") {
-                ledElement.classList.add('on');
-                ledElement.querySelector('span').textContent = `${title}: on`;
-            } else if (value === "hwc") {
-                ledElement.classList.add('hwc');
-                ledElement.querySelector('span').textContent = `${title}: hwc`;
-            } else {
-                ledElement.classList.add('off');
-                ledElement.querySelector('span').textContent = `${title}: off`;
+            // Dynamische Klassenzuweisung basierend auf dem Wert
+            if (['on', 'hwc', 'fan', 'run', 'off'].includes(value)) {
+                ledElement.classList.add(value);
             }
-            timer_logic(ledElement,value, title, start_time);
+
+            // Text aktualisieren
+            ledElement.querySelector('span').textContent = `${title}: ${value}`;
+
+            // Timer-Logik starten (wenn es nicht 'off' ist)
+            timer_logic(ledElement, value, title, start_time);
         }
     });
 

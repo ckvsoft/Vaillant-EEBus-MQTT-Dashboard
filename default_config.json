@@ -406,5 +406,17 @@
       {"circuit": "omu", "name": "Defroster"},
       {"circuit": "hmu", "name": "CurrentConsumedPower"},
       {"circuit": "hmu", "name": "LiveMonitorCurrentYieldPower"}
-  ]
+  ],
+  "ebus_handlers_cfg": [
+        {
+            "device": "omu",
+            "event": "DeicingActive",
+            "func": "update_deicing"
+        },
+        {
+            "device": "omu",
+            "event": "Defroster",
+            "func": "update_status"
+        }
+    ]
 }

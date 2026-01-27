@@ -368,7 +368,7 @@ def index():
                 'start_time': str(mqtt_values[topic].get("start_time", ""))
             })
             leds.append({
-                "title": "Deicing",
+                "title": "Enteisen",
                 "value": "on" if deicing_tracker.active else "off",
                 "start_time": deicing_tracker.start_time
             })
@@ -476,9 +476,29 @@ if __name__ == '__main__':
     ebus = EbusDirect()
     deicing_tracker = DeicingTracker(ebus, socketio, stop_callback=deicing_stop_callback)
 
-    EBUS_HANDLERS = {
-        ("omu", "DeicingActive"): deicing_tracker.update
+    function_map = {
+        "update_deicing": deicing_tracker.update,
+        "update_status": deicing_tracker.update_defroster_stat
     }
+    # Assuming 'config' is your already loaded JSON data
+    # We initialize the EBUS_HANDLERS dictionary
+    EBUS_HANDLERS = {}
+
+    # Populate the dictionary from the loaded config
+    for entry in config.get("ebus_handlers_cfg", []):
+        device = entry.get("device")
+        event = entry.get("event")
+        func_name = entry.get("func")
+
+        # Get the actual function reference from our map
+        target_func = function_map.get(func_name)
+
+        if device and event and target_func:
+            # Construct the key as a tuple (device, event)
+            EBUS_HANDLERS[(device, event)] = target_func
+        else:
+            # Skip invalid or missing configuration entries
+            log.warning(f"Skipping invalid handler config: {device}, {event}")
 
     threading.Thread(target=ebus.ebus_poller, args=(config["ebus_polling"], ebus_dispatcher), daemon=True).start()
     counter["total"] = ebus.read_value('hmu', 'CompressorStarts')

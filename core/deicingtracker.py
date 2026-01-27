@@ -22,12 +22,19 @@ class DeicingTracker:
         elif not is_deicing and self.active:
             self.stop(now)
 
+    def update_defroster_stat(self, value):
+        is_defroster = str(value).lower() in ["on"]
+        if is_defroster and self.active:
+            self.socketio.emit("update_led", {"title": "Enteisen", "value": "run", "start_time": self.start_time})
+        elif not is_defroster and self.active:
+            self.socketio.emit("update_led", {"title": "Enteisen", "value": "fan", "start_time": self.start_time})
+
     def start(self, now):
         self.active = True
         self.start_time = now
         self.log.info("🧊 Enteisen gestartet")
         self.ebus.write_value("700", "OpMode", "0")
-        self.socketio.emit("update_led", {"title": "Deicing", "value": "on", "start_time": now})
+        self.socketio.emit("update_led", {"title": "Enteisen", "value": "fan", "start_time": now})
 
     def stop(self, now):
         duration = now - self.start_time
@@ -35,6 +42,6 @@ class DeicingTracker:
         self.ebus.write_value("700", "OpMode", "2")
         self.active = False
         self.start_time = None
-        self.socketio.emit("update_led", {"title": "Deicing", "value": "off", "start_time": None})
+        self.socketio.emit("update_led", {"title": "Enteisen", "value": "off", "start_time": None})
         if self.stop_callback:
             self.stop_callback(duration, self.start_time)
