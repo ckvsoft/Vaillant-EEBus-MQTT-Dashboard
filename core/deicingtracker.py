@@ -8,12 +8,13 @@ LOG_FILE_PATH = logger_instance.get_log_file()
 log = logger_instance.get_logger()
 
 class DeicingTracker:
-    def __init__(self, ebus, socketio):
+    def __init__(self, ebus, socketio, stop_callback=None):
         self.prev_status = None
         self.active = False
         self.start_time = None
         self.ebus = ebus
         self.socketio = socketio
+        self.stop_callback = stop_callback
 
     def update(self, value):
         is_deicing = str(value).lower() in ["1", "yes", "true"]
@@ -38,3 +39,5 @@ class DeicingTracker:
         self.active = False
         self.start_time = None
         self.socketio.emit("update_led", {"title": "Deicing", "value": "off", "start_time": None})
+        if self.stop_callback:
+            self.stop_callback(duration, self.start_time)

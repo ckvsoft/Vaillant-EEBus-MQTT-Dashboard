@@ -119,7 +119,8 @@ def on_message(_client, _userdata, msg):
 
                         if status == "hwc":
                             hwc["status"] = True
-                        topic_config["start_time"] = str(datetime.now().timestamp())
+                        if not topic_config.get("start_time"):
+                            topic_config["start_time"] = str(datetime.now().timestamp())
 
                     elif status not in ["on", "hwc"]:
                         hwc["switch"] = False
@@ -422,6 +423,15 @@ def ebus_dispatcher(circuit, name, value):
     if handler:
         handler(value)
 
+def deicing_stop_callback(duration, start_time):
+    count = sum(1 for k in runtime["runs"]["today"] if str(k).startswith("D")) + 1
+    run_id = f"D{count}"
+    runtime["runs"]["today"][run_id] = {
+        "time": time.strftime("%H:%M", time.localtime(start_time)),
+        "elapsed_hours": duration / 3600
+    }
+    save_values(runtime, "runtime.json")
+
 config = load_config()
 mqtt_config = config.get("mqtt_config", {})
 mqtt_client = mqtt.Client( protocol=mqtt.MQTTv5, callback_api_version=mqtt.CallbackAPIVersion.VERSION2)
@@ -464,7 +474,7 @@ if __name__ == '__main__':
     # Start the poller thread with the list from config
     ebus_polling_list = config.get("ebus_polling", [])
     ebus = EbusDirect()
-    deicing_tracker = DeicingTracker(ebus, socketio)
+    deicing_tracker = DeicingTracker(ebus, socketio, stop_callback=deicing_stop_callback)
 
     EBUS_HANDLERS = {
         ("omu", "DeicingActive"): deicing_tracker.update

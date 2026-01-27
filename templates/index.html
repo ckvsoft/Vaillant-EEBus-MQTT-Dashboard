@@ -47,9 +47,21 @@
             color: #ddd; /* Hellgrauer Text für zusätzliche Infos */
         }
 
+        #led-container {
+            position: sticky;
+            top: 0;
+            background-color: #121212; /* Gleiche Hintergrundfarbe wie Body */
+            padding: 10px 0;
+            z-index: 1000; /* Damit sie über anderen Elementen stehen */
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
         .led-status {
             padding: 10px;
-            margin-bottom: 10px;
+            flex: 1 1 150px; /* Jede LED mindestens 150px breit, kann wachsen */
+            min-width: 120px;
             border-radius: 5px;
             font-weight: bold;
         }
@@ -166,12 +178,15 @@
 </head>
 <body>
 
-{% for led in leds %}
-<div class="led-status {{ led.value }}" id="led-status-{{ led.title }}">
-    <span>{{ led.title }}: {{ led.value }}</span>
-    <span class="timer" data-start-time="{{ led.start_time }}"></span> <!-- Startzeit für den Timer -->
+<div id="led-container">
+    {% for led in leds %}
+    <div class="led-status {{ led.value }}" id="led-status-{{ led.title }}">
+        <span>{{ led.title }}: {{ led.value }}</span>
+        <span class="timer" data-start-time="{{ led.start_time }}"></span>
+    </div>
+    {% endfor %}
 </div>
-{% endfor %}
+
 
 <h2>Live Gauges</h2>
 <div class="gauge-container" id="gauges-container">
