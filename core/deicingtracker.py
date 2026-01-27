@@ -38,10 +38,10 @@ class DeicingTracker:
 
     def stop(self, now):
         duration = now - self.start_time
+        if self.stop_callback:
+            self.stop_callback(duration, self.start_time)
+
         self.log.info(f"🧊 Enteisen beendet ({duration/60:.1f} min)")
         self.ebus.write_value("700", "OpMode", "1")
         self.active = False
-        self.start_time = None
         self.socketio.emit("update_led", {"title": "Enteisen", "value": "off", "start_time": None})
-        if self.stop_callback:
-            self.stop_callback(duration, self.start_time)
