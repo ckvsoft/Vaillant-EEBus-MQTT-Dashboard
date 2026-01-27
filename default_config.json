@@ -275,6 +275,84 @@
       ],
       "isInteger": "false"
     },
+    "ebusd/700/SystemFlowTemp": {
+      "type": "gauge",
+      "value": 0.0,
+      "range": [
+        15,
+        45
+      ],
+      "title": "BUFFER VL IST",
+      "color_ranges": [
+        {
+          "range": [
+            15,
+            40
+          ],
+          "color": "gray"
+        },
+        {
+          "range": [
+            40,
+            45
+          ],
+          "color": "red"
+        }
+      ],
+      "isInteger": "false"
+    },
+    "ebusd/hmu/FlowTemp": {
+      "type": "gauge",
+      "value": 0.0,
+      "range": [
+        15,
+        45
+      ],
+      "title": "VL IST",
+      "color_ranges": [
+        {
+          "range": [
+            15,
+            40
+          ],
+          "color": "gray"
+        },
+        {
+          "range": [
+            40,
+            45
+          ],
+          "color": "red"
+        }
+      ],
+      "isInteger": "false"
+    },
+    "ebusd/hmu/TargetFlowTemp": {
+      "type": "gauge",
+      "value": 0.0,
+      "range": [
+        15,
+        45
+      ],
+      "title": "VL SOLL",
+      "color_ranges": [
+        {
+          "range": [
+            15,
+            40
+          ],
+          "color": "gray"
+        },
+        {
+          "range": [
+            40,
+            45
+          ],
+          "color": "red"
+        }
+      ],
+      "isInteger": "false"
+    },
     "ebusd/hmu/CurrentConsumedPower": {
       "type": "text",
       "value": "N/A",
@@ -318,9 +396,12 @@
     }
   },
   "ebus_polling": [
+      {"circuit": "700", "name": "SystemFlowTemp"},
       {"circuit": "hmu", "name": "CompressorStarts"},
       {"circuit": "hmu", "name": "State"},
       {"circuit": "hmu", "name": "SourcePressure"},
+      {"circuit": "hmu", "name": "FlowTemp"},
+      {"circuit": "hmu", "name": "TargetFlowTemp"},
       {"circuit": "omu", "name": "DeicingActive"},
       {"circuit": "omu", "name": "Defroster"},
       {"circuit": "hmu", "name": "CurrentConsumedPower"},
