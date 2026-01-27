@@ -1,12 +1,10 @@
 import time
-
 from core.log import Logger
 
 class DeicingTracker:
     def __init__(self, ebus, socketio, stop_callback=None):
         logger_instance = Logger()
         self.log = logger_instance.get_logger()
-        self.prev_status = None
         self.active = False
         self.start_time = None
         self.ebus = ebus
@@ -15,33 +13,58 @@ class DeicingTracker:
 
     def update(self, value):
         is_deicing = str(value).lower() in ["1", "yes", "true"]
-        now = time.time()
 
         if is_deicing and not self.active:
-            self.start(now)
+            self.start()
         elif not is_deicing and self.active:
-            self.stop(now)
+            self.stop()
 
     def update_defroster_stat(self, value):
+        """Changes the visual state (fan/run) without resetting the timer."""
+        if not self.active:
+            return
+
         is_defroster = str(value).lower() in ["on"]
-        if is_defroster and self.active:
-            self.socketio.emit("update_led", {"title": "Enteisen", "value": "run", "start_time": self.start_time})
-        elif not is_defroster and self.active:
-            self.socketio.emit("update_led", {"title": "Enteisen", "value": "fan", "start_time": self.start_time})
+        status_value = "run" if is_defroster else "fan"
 
-    def start(self, now):
+        # We broadcast the original start_time so the frontend timer stays consistent
+        self.socketio.emit("update_led", {
+            "title": "Enteisen",
+            "value": status_value,
+            "start_time": self.start_time
+        })
+
+    def start(self):
         self.active = True
-        self.start_time = now
+        self.start_time = time.time()  # Set once and keep it
         self.log.info("🧊 Enteisen gestartet")
-        self.ebus.write_value("700", "OpMode", "0")
-        self.socketio.emit("update_led", {"title": "Enteisen", "value": "fan", "start_time": now})
 
-    def stop(self, now):
+        # Set mode to manual during deicing
+        self.ebus.write_value("700", "OpMode", "0")
+
+        self.socketio.emit("update_led", {
+            "title": "Enteisen",
+            "value": "fan",
+            "start_time": self.start_time
+        })
+
+    def stop(self):
+        now = time.time()
         duration = now - self.start_time
+
         if self.stop_callback:
             self.stop_callback(duration, self.start_time)
 
-        self.log.info(f"🧊 Enteisen beendet ({duration/60:.1f} min)")
+        self.log.info(f"🧊 Enteisen beendet ({duration / 60:.1f} min)")
+
+        # Restore automatic mode
         self.ebus.write_value("700", "OpMode", "1")
+
+        self.socketio.emit("update_led", {
+            "title": "Enteisen",
+            "value": "off",
+            "start_time": None
+        })
+
         self.active = False
-        self.socketio.emit("update_led", {"title": "Enteisen", "value": "off", "start_time": None})
+        self.start_time = None
