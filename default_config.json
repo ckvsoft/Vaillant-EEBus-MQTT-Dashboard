@@ -389,6 +389,18 @@
       "title": "Warmwasserspeicher Temperatur",
       "data_type": "float"
     },
+    "ebusd/omu/ODUSourceInput": {
+      "type": "text",
+      "value": "N/A",
+      "title": "Verdampfer Temperatur",
+      "data_type": "float"
+    },
+    "ebusd/hmu/SourceTempOutput": {
+      "type": "text",
+      "value": "N/A",
+      "title": "Liquid Temperatur",
+      "data_type": "float"
+    },
     "ebusd/hmu/Status01": {
       "type": "led",
       "value": "off",
@@ -405,7 +417,9 @@
       {"circuit": "omu", "name": "DeicingActive"},
       {"circuit": "omu", "name": "Defroster"},
       {"circuit": "hmu", "name": "CurrentConsumedPower"},
-      {"circuit": "hmu", "name": "LiveMonitorCurrentYieldPower"}
+      {"circuit": "hmu", "name": "LiveMonitorCurrentYieldPower"},
+      {"circuit": "omu", "name": "ODUSourceInput"},
+      {"circuit": "hmu", "name": "SourceTempOutput"}
   ],
   "ebus_handlers_cfg": [
         {
