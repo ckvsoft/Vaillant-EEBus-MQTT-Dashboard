@@ -392,68 +392,82 @@
         const tooltipContent = document.getElementById('tooltip-content-today');
 
         if (timerElement && runtimeElement && startTime) {
-            // 1. Startzeit formatieren (HH:MM)
-            const startDate = new Date(startTime * 1000); // Von Sekunden zu Millisekunden
+            const startDate = new Date(startTime * 1000);
             const formattedStart = startDate.getHours().toString().padStart(2, '0') + ':' +
                                    startDate.getMinutes().toString().padStart(2, '0');
-
-            // 2. Berechnung der verstrichenen Zeit
             const elapsed = Math.floor((Date.now() / 1000) - startTime);
             const elapsedMinutes = Math.floor(elapsed / 60);
-            const elapsedSeconds = elapsed % 60;
+            const timeText = `${elapsedMinutes} Min ${String(elapsed % 60).padStart(2, '0')} Sek`;
 
-            const timeText = `${elapsedMinutes} Min ${String(elapsedSeconds).padStart(2, '0')} Sek`;
             timerElement.textContent = ` (${timeText})`;
 
-            // 3. Im Tooltip anzeigen (mit formatierter Startzeit)
+            // 1. Live-Eintrag erstellen oder finden
             let liveEntry = document.getElementById('live-run-cell');
             if (!liveEntry) {
                 liveEntry = document.createElement('div');
                 liveEntry.id = 'live-run-cell';
-                liveEntry.style.padding = "2px";
-                liveEntry.style.color = "#3fff33";
-                liveEntry.style.fontWeight = "bold";
-                tooltipContent.appendChild(liveEntry);
+                liveEntry.style.cssText = "color: #3fff33; font-weight: bold; padding: 2px; flex: 1;";
             }
-            const classes = ledElement.classList;
-            let prefix = "";
 
-            if (classes.contains('fan') || classes.contains('run')) {
-                prefix = "D";
-            } else {
-                const serverEntries = tooltipContent.querySelectorAll('div:not(#live-run-cell)');
-                let lastNumber = 0;
+            // 2. In die bestehende Spaltenstruktur einreihen
+            const rows = tooltipContent.querySelectorAll('div[style*="display: flex"]');
+            const lastRow = rows[rows.length - 1];
 
-                for (let i = serverEntries.length - 1; i >= 0; i--) {
-                    const text = serverEntries[i].textContent.trim();
-                    // Sucht nach Zahlen am Anfang, ignoriert alles nach dem Punkt oder Doppelpunkt
-                    // Erkennt "12:", "12.1:", "13.2" etc.
-                    const match = text.match(/^(\d+)/);
+            if (lastRow) {
+                // Falls der Timer noch nicht in der Zeile ist
+                if (!lastRow.contains(liveEntry)) {
+                    // Suche nach einem leeren Platzhalter-Div (deine formatRuns lässt Felder leer)
+                    const emptyDiv = Array.from(lastRow.children).find(child => child.textContent.trim() === "");
 
-                    if (match) {
-                        lastNumber = parseInt(match[1], 10); // Nimmt nur die "12" von "12.1"
-                        break;
+                    if (emptyDiv) {
+                        // Ersetze den Platzhalter durch den Live-Timer
+                        lastRow.replaceChild(liveEntry, emptyDiv);
+                    } else if (lastRow.children.length < 3) {
+                        // Falls die Zeile weniger als 3 Spalten hat, einfach anhängen
+                        lastRow.appendChild(liveEntry);
+                    } else {
+                        // Nur wenn die Zeile wirklich voll ist, neue Zeile
+                        const newRow = document.createElement('div');
+                        newRow.style.display = 'flex';
+                        newRow.appendChild(liveEntry);
+                        tooltipContent.appendChild(newRow);
                     }
                 }
-                prefix = lastNumber + 1;
             }
 
-            // Jetzt bleibt die Nummer stabil, weil die Live-Zelle sich nicht selbst als Basis nimmt
-            liveEntry.textContent = `${prefix}: [${formattedStart}] ${timeText}`;
+            // 3. Prefix fixieren (wie besprochen über dataset)
+            if (!ledElement.dataset.currentRunPrefix) {
+                let maxNormal = 0;
+                let maxDefrost = 0;
+                const allDivs = tooltipContent.querySelectorAll('div');
 
-            const runtime = runtime_today;
-            const runtimeMatch = runtime.match(/(\d+)\s*Std\s*(\d+)\s*Min/);
+                allDivs.forEach(div => {
+                    if (div.id !== 'live-run-cell') {
+                        const text = div.textContent.trim();
+                        const normalMatch = text.match(/^(\d+)/);
+                        if (normalMatch) maxNormal = Math.max(maxNormal, parseInt(normalMatch[1], 10));
 
+                        const defrostMatch = text.match(/^D(\d+)/);
+                        if (defrostMatch) maxDefrost = Math.max(maxDefrost, parseInt(defrostMatch[1], 10));
+                    }
+                });
+
+                const isDefrost = ledElement.classList.contains('fan') || ledElement.classList.contains('run');
+                ledElement.dataset.currentRunPrefix = isDefrost ? "D" + (maxDefrost + 1) : (maxNormal + 1);
+            }
+
+            liveEntry.textContent = `${ledElement.dataset.currentRunPrefix}: [${formattedStart}] ${timeText}`;
+
+            // 4. Laufzeit-Update
+            const runtimeMatch = runtime_today.match(/(\d+)\s*Std\s*(\d+)\s*Min/);
             let hours = 0, minutes = 0;
             if (runtimeMatch) {
                 hours = parseInt(runtimeMatch[1], 10) || 0;
                 minutes = parseInt(runtimeMatch[2], 10) || 0;
             }
-
             minutes += elapsedMinutes;
             hours += Math.floor(minutes / 60);
             minutes = minutes % 60;
-
             runtimeElement.textContent = `${hours} Std ${minutes} Min`;
         }
     }
