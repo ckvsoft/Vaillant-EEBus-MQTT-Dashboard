@@ -392,25 +392,55 @@
         const tooltipContent = document.getElementById('tooltip-content-today');
 
         if (timerElement && runtimeElement && startTime) {
-            // Berechnung der verstrichenen Zeit
-            const elapsed = Math.floor((Date.now() / 1000) - startTime); // Zeit in Sekunden
+            // 1. Startzeit formatieren (HH:MM)
+            const startDate = new Date(startTime * 1000); // Von Sekunden zu Millisekunden
+            const formattedStart = startDate.getHours().toString().padStart(2, '0') + ':' +
+                                   startDate.getMinutes().toString().padStart(2, '0');
+
+            // 2. Berechnung der verstrichenen Zeit
+            const elapsed = Math.floor((Date.now() / 1000) - startTime);
             const elapsedMinutes = Math.floor(elapsed / 60);
             const elapsedSeconds = elapsed % 60;
 
             const timeText = `${elapsedMinutes} Min ${String(elapsedSeconds).padStart(2, '0')} Sek`;
             timerElement.textContent = ` (${timeText})`;
 
+            // 3. Im Tooltip anzeigen (mit formatierter Startzeit)
             let liveEntry = document.getElementById('live-run-cell');
             if (!liveEntry) {
                 liveEntry = document.createElement('div');
                 liveEntry.id = 'live-run-cell';
-                liveEntry.style.color = '#3fff33';
-                liveEntry.style.fontWeight = 'bold';
+                liveEntry.style.padding = "2px";
+                liveEntry.style.color = "#3fff33";
+                liveEntry.style.fontWeight = "bold";
                 tooltipContent.appendChild(liveEntry);
             }
-            liveEntry.textContent = timeText;
+            const classes = ledElement.classList;
+            let prefix = "";
 
-            // Berechnung der neuen Laufzeit für runtime.today
+            if (classes.contains('fan') || classes.contains('run')) {
+                prefix = "D";
+            } else {
+                const serverEntries = tooltipContent.querySelectorAll('div:not(#live-run-cell)');
+                let lastNumber = 0;
+
+                for (let i = serverEntries.length - 1; i >= 0; i--) {
+                    const text = serverEntries[i].textContent.trim();
+                    // Sucht nach Zahlen am Anfang, ignoriert alles nach dem Punkt oder Doppelpunkt
+                    // Erkennt "12:", "12.1:", "13.2" etc.
+                    const match = text.match(/^(\d+)/);
+
+                    if (match) {
+                        lastNumber = parseInt(match[1], 10); // Nimmt nur die "12" von "12.1"
+                        break;
+                    }
+                }
+                prefix = lastNumber + 1;
+            }
+
+            // Jetzt bleibt die Nummer stabil, weil die Live-Zelle sich nicht selbst als Basis nimmt
+            liveEntry.textContent = `${prefix}: [${formattedStart}] ${timeText}`;
+
             const runtime = runtime_today;
             const runtimeMatch = runtime.match(/(\d+)\s*Std\s*(\d+)\s*Min/);
 
@@ -420,12 +450,10 @@
                 minutes = parseInt(runtimeMatch[2], 10) || 0;
             }
 
-            // Addiere die verstrichenen Minuten zur aktuellen Laufzeit
             minutes += elapsedMinutes;
-            hours += Math.floor(minutes / 60); // Überlauf in Stunden umwandeln
-            minutes = minutes % 60; // Rest-Minuten berechnen
+            hours += Math.floor(minutes / 60);
+            minutes = minutes % 60;
 
-            // Aktualisiere die Anzeige von runtime.today
             runtimeElement.textContent = `${hours} Std ${minutes} Min`;
         }
     }
