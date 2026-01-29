@@ -380,6 +380,8 @@
             if (timerElement) {
                 timerElement.remove();
             }
+            const liveEntry = document.getElementById('live-run-cell');
+            if (liveEntry) liveEntry.remove();
             ledElement.dataset.hasInterval = ""; // Reset für das nächste Mal
         }
     }
@@ -387,6 +389,7 @@
     function updateTimer(ledElement, startTime) {
         const timerElement = ledElement.querySelector('.timer');
         const runtimeElement = document.getElementById('runtime-today');
+        const tooltipContent = document.getElementById('tooltip-content-today');
 
         if (timerElement && runtimeElement && startTime) {
             // Berechnung der verstrichenen Zeit
@@ -394,7 +397,18 @@
             const elapsedMinutes = Math.floor(elapsed / 60);
             const elapsedSeconds = elapsed % 60;
 
-            timerElement.textContent = ` (${elapsedMinutes}m ${String(elapsedSeconds).padStart(2, '0')}s)`;
+            const timeText = `${elapsedMinutes} Min ${String(elapsedSeconds).padStart(2, '0')} Sek`;
+            timerElement.textContent = ` (${timeText})`;
+
+            let liveEntry = document.getElementById('live-run-cell');
+            if (!liveEntry) {
+                liveEntry = document.createElement('div');
+                liveEntry.id = 'live-run-cell';
+                liveEntry.style.color = '#3fff33';
+                liveEntry.style.fontWeight = 'bold';
+                tooltipContent.appendChild(liveEntry);
+            }
+            liveEntry.textContent = timeText;
 
             // Berechnung der neuen Laufzeit für runtime.today
             const runtime = runtime_today;
