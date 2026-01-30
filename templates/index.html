@@ -411,18 +411,14 @@
             // Wir gehen die Liste von HINTEN nach VORNE durch (der neueste Lauf ist unten)
             for (let i = cells.length - 1; i >= 0; i--) {
                 let div = cells[i];
-
-                // WICHTIG: Wir prüfen auf die Uhrzeit UND ob es ein heute-Lauf ist
-                console.log('div.textContent = ' + div.textContent);
-
                 if (div.textContent.includes(searchTarget)) {
                     const parts = div.textContent.split(']');
                     if (parts.length > 1) {
-                        // NUR diesen einen, neuesten Treffer aktualisieren
-                        div.innerHTML = `<span style="color: #3fff33; font-weight: bold;">${parts[0]}] ${timeText}</span>`;
-
-                        // Sobald wir den richtigen (neuesten) gefunden haben: ABBRECHEN!
-                        // Das verhindert, dass er alte Einträge von 08:00 Uhr grün macht.
+                        let prefix = '';
+                        if (div.textContent.toLowerCase().includes('hwc')) {
+                            prefix = 'HWC ';
+                        }
+                        div.innerHTML = `<span style="color: #3fff33; font-weight: bold;">${parts[0]}] ${prefix}${timeText}</span>`;
                         break;
                     }
                 }
