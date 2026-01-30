@@ -217,7 +217,8 @@ def update_runtime(elapsed, start_time):
     # Gesamtstunden addieren
     runtime[target_day] += elapsed
 
-    hwc["status"] = False
+    if elapsed > 0:
+        hwc["status"] = False
 
 def save_values(data, filename="data.json"):
     try:
