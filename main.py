@@ -145,6 +145,7 @@ def on_message(_client, _userdata, msg):
                             hwc["status"] = True
                         if not topic_config.get("start_time"):
                             topic_config["start_time"] = str(datetime.now().timestamp())
+                            update_runtime(0, topic_config.get("start_time"))
 
                     elif status not in ["on", "hwc"]:
                         hwc["switch"] = False
@@ -447,14 +448,13 @@ def ebus_dispatcher(circuit, name, value):
     if handler:
         handler(value)
 
-def deicing_stop_callback(duration, start_time):
+def deicing_callback(action, duration, start_time):
     count = sum(1 for k in runtime["runs"]["today"] if str(k).startswith("D")) + 1
     run_id = f"D{count}"
     runtime["runs"]["today"][run_id] = {
         "time": time.strftime("%H:%M", time.localtime(start_time)),
         "elapsed_hours": duration / 3600
     }
-    save_values(runtime, "runtime.json")
     rt = {
         "today": format_runtime(runtime.get("today", 0)),
         "yesterday": format_runtime(runtime.get("yesterday", 0)),
@@ -462,6 +462,9 @@ def deicing_stop_callback(duration, start_time):
         "runs_yesterday": format_runs(runtime.get("runs", {}).get("yesterday", {}))
     }
     socketio.emit('update_runtime', rt)
+    if action == 'stop':
+        save_values(runtime, "runtime.json")
+
 
 config = load_config()
 mqtt_config = config.get("mqtt_config", {})
@@ -505,7 +508,7 @@ if __name__ == '__main__':
     # Start the poller thread with the list from config
     ebus_polling_list = config.get("ebus_polling", [])
     ebus = EbusDirect()
-    deicing_tracker = DeicingTracker(ebus, socketio, stop_callback=deicing_stop_callback)
+    deicing_tracker = DeicingTracker(ebus, socketio, callback=deicing_callback)
 
     function_map = {
         "update_deicing": deicing_tracker.update,

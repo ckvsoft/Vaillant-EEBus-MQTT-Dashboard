@@ -2,14 +2,14 @@ import time
 from core.log import Logger
 
 class DeicingTracker:
-    def __init__(self, ebus, socketio, stop_callback=None):
+    def __init__(self, ebus, socketio, callback=None):
         logger_instance = Logger()
         self.log = logger_instance.get_logger()
         self.active = False
         self.start_time = None
         self.ebus = ebus
         self.socketio = socketio
-        self.stop_callback = stop_callback
+        self.callback = callback
 
     def update(self, value):
         is_deicing = str(value).lower() in ["1", "yes", "true"]
@@ -38,6 +38,8 @@ class DeicingTracker:
         self.active = True
         self.start_time = time.time()  # Set once and keep it
         self.log.info("🧊 Enteisen gestartet")
+        if self.callback:
+            self.callback('start', 0, self.start_time)
 
         # Set mode to manual during deicing
         self.ebus.write_value("700", "OpMode", "0")
@@ -52,8 +54,8 @@ class DeicingTracker:
         now = time.time()
         duration = now - self.start_time
 
-        if self.stop_callback:
-            self.stop_callback(duration, self.start_time)
+        if self.callback:
+            self.callback('stop', duration, self.start_time)
 
         self.log.info(f"🧊 Enteisen beendet ({duration / 60:.1f} min)")
 

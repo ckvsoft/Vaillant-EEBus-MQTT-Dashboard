@@ -388,87 +388,45 @@
 
     function updateTimer(ledElement, startTime) {
         const timerElement = ledElement.querySelector('.timer');
-        const runtimeElement = document.getElementById('runtime-today');
         const tooltipContent = document.getElementById('tooltip-content-today');
 
-        if (timerElement && runtimeElement && startTime) {
-            const startDate = new Date(startTime * 1000);
-            const formattedStart = startDate.getHours().toString().padStart(2, '0') + ':' +
-                                   startDate.getMinutes().toString().padStart(2, '0');
-            const elapsed = Math.floor((Date.now() / 1000) - startTime);
-            const elapsedMinutes = Math.floor(elapsed / 60);
-            const timeText = `${elapsedMinutes} Min ${String(elapsed % 60).padStart(2, '0')} Sek`;
+        if (timerElement && startTime && startTime !== "None") {
+            const startTs = parseFloat(startTime);
+            const elapsed = Math.floor((Date.now() / 1000) - startTs);
+            const m = Math.floor(elapsed / 60);
+            const s = String(elapsed % 60).padStart(2, '0');
+            const timeText = `${m} Min ${s} Sek`;
 
             timerElement.textContent = ` (${timeText})`;
 
-            // 1. Live-Eintrag erstellen oder finden
-            let liveEntry = document.getElementById('live-run-cell');
-            if (!liveEntry) {
-                liveEntry = document.createElement('div');
-                liveEntry.id = 'live-run-cell';
-                liveEntry.style.cssText = "color: #3fff33; font-weight: bold; padding: 2px; flex: 1;";
-            }
+            // Uhrzeit exakt formatieren
+            const startDate = new Date(startTs * 1000);
+            const hh = String(startDate.getHours()).padStart(2, '0');
+            const mm = String(startDate.getMinutes()).padStart(2, '0');
+            const searchTarget = `[${hh}:${mm}]`; // Erzeugt z.B. "[10:20]"
 
-            // 2. In die bestehende Spaltenstruktur einreihen
-            const rows = tooltipContent.querySelectorAll('div[style*="display: flex"]');
-            const lastRow = rows[rows.length - 1];
+            console.log('searchTarget = ' + searchTarget);
+            const cells = tooltipContent.querySelectorAll('div');
 
-            if (lastRow) {
-                // Falls der Timer noch nicht in der Zeile ist
-                if (!lastRow.contains(liveEntry)) {
-                    // Suche nach einem leeren Platzhalter-Div (deine formatRuns lässt Felder leer)
-                    const emptyDiv = Array.from(lastRow.children).find(child => child.textContent.trim() === "");
+            // Wir gehen die Liste von HINTEN nach VORNE durch (der neueste Lauf ist unten)
+            for (let i = cells.length - 1; i >= 0; i--) {
+                let div = cells[i];
 
-                    if (emptyDiv) {
-                        // Ersetze den Platzhalter durch den Live-Timer
-                        lastRow.replaceChild(liveEntry, emptyDiv);
-                    } else if (lastRow.children.length < 3) {
-                        // Falls die Zeile weniger als 3 Spalten hat, einfach anhängen
-                        lastRow.appendChild(liveEntry);
-                    } else {
-                        // Nur wenn die Zeile wirklich voll ist, neue Zeile
-                        const newRow = document.createElement('div');
-                        newRow.style.display = 'flex';
-                        newRow.appendChild(liveEntry);
-                        tooltipContent.appendChild(newRow);
+                // WICHTIG: Wir prüfen auf die Uhrzeit UND ob es ein heute-Lauf ist
+                console.log('div.textContent = ' + div.textContent);
+
+                if (div.textContent.includes(searchTarget)) {
+                    const parts = div.textContent.split(']');
+                    if (parts.length > 1) {
+                        // NUR diesen einen, neuesten Treffer aktualisieren
+                        div.innerHTML = `<span style="color: #3fff33; font-weight: bold;">${parts[0]}] ${timeText}</span>`;
+
+                        // Sobald wir den richtigen (neuesten) gefunden haben: ABBRECHEN!
+                        // Das verhindert, dass er alte Einträge von 08:00 Uhr grün macht.
+                        break;
                     }
                 }
             }
-
-            // 3. Prefix fixieren (wie besprochen über dataset)
-            if (!ledElement.dataset.currentRunPrefix) {
-                let maxNormal = 0;
-                let maxDefrost = 0;
-                const allDivs = tooltipContent.querySelectorAll('div');
-
-                allDivs.forEach(div => {
-                    if (div.id !== 'live-run-cell') {
-                        const text = div.textContent.trim();
-                        const normalMatch = text.match(/^(\d+)/);
-                        if (normalMatch) maxNormal = Math.max(maxNormal, parseInt(normalMatch[1], 10));
-
-                        const defrostMatch = text.match(/^D(\d+)/);
-                        if (defrostMatch) maxDefrost = Math.max(maxDefrost, parseInt(defrostMatch[1], 10));
-                    }
-                });
-
-                const isDefrost = ledElement.classList.contains('fan') || ledElement.classList.contains('run');
-                ledElement.dataset.currentRunPrefix = isDefrost ? "D" + (maxDefrost + 1) : (maxNormal + 1);
-            }
-
-            liveEntry.textContent = `${ledElement.dataset.currentRunPrefix}: [${formattedStart}] ${timeText}`;
-
-            // 4. Laufzeit-Update
-            const runtimeMatch = runtime_today.match(/(\d+)\s*Std\s*(\d+)\s*Min/);
-            let hours = 0, minutes = 0;
-            if (runtimeMatch) {
-                hours = parseInt(runtimeMatch[1], 10) || 0;
-                minutes = parseInt(runtimeMatch[2], 10) || 0;
-            }
-            minutes += elapsedMinutes;
-            hours += Math.floor(minutes / 60);
-            minutes = minutes % 60;
-            runtimeElement.textContent = `${hours} Std ${minutes} Min`;
         }
     }
 
