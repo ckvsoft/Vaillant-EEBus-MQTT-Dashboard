@@ -459,6 +459,7 @@ def deicing_callback(action, duration, start_time):
             "time": time.strftime("%H:%M", time.localtime(start_time)),
             "elapsed_hours": 0
         }
+        save_values(runtime, "runtime.json")
 
     elif action == 'stop':
         run_id = f"D{count}"
