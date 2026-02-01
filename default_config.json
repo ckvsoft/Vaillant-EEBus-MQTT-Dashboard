@@ -160,6 +160,7 @@
         180
       ],
       "title": "Energie Integral",
+      "link_to": "internal/EnergieIntegralStats",
       "color_ranges": [
         {
           "range": [
@@ -352,6 +353,13 @@
         }
       ],
       "isInteger": "false"
+    },
+    "internal/EnergieIntegralStats": {
+      "type": "text",
+      "value": "N/A",
+      "title": "Energie Integral",
+      "data_type": "string",
+      "internal": true
     },
     "ebusd/hmu/CurrentConsumedPower": {
       "type": "text",

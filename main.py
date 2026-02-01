@@ -27,19 +27,60 @@ log = logger_instance.get_logger()  # Hol dir den eigentlichen Logger
 # MQTT Callback-Funktionen
 def on_connect(client, _userdata, _flags, reason_code, _properties):
     log.info(f"Verbunden mit Code: {reason_code}")
-    for topic in mqtt_values:
-        client.subscribe(topic)
-        log.info(f"Abonniert: {topic}")
+    for topic, data in mqtt_values.items():
+        if not data.get("internal", False):
+            client.subscribe(topic)
+            log.info(f"Abonniert: {topic}")
 
 def on_message(_client, _userdata, msg):
 
     topic = msg.topic
     payload = msg.payload.decode()
 
-    try:
-        # Zugriff auf die Konfiguration für dieses Topic
-        topic_config = mqtt_values.get(topic)
+    # Zugriff auf die Konfiguration für dieses Topic
+    topic_config = mqtt_values.get(topic)
+    if not topic_config:
+        return
 
+    target_id = topic_config.get("link_to")
+    if target_id:
+        try:
+            # Wert extrahieren (bei ebusd oft "Zahl;ok")
+            curr = int(float(payload.split(';')[0]))
+
+            # Ziel-Konfiguration finden (z.B. den Text-Eintrag)
+            target_config = mqtt_values.get(target_id)
+
+            if target_config:
+                # Dynamische Min/Max Felder im 'counter' Dict (automatisch pro Topic!)
+                # Wir nutzen die target_id als Key, damit es für jedes Topic separat klappt
+                min_key = f"{target_id}_min"
+                max_key = f"{target_id}_max"
+
+                counter.setdefault(min_key, curr)
+                counter.setdefault(max_key, curr)
+
+                changed = False
+                if curr < counter[min_key]:
+                    counter[min_key] = curr
+                    changed = True
+                if curr > counter[max_key]:
+                    counter[max_key] = curr
+                    changed = True
+
+                if changed:
+                    save_values(counter, "data.json")
+
+                # Update an die Text-Liste senden
+                display_text = f"{curr} (Min: {counter[min_key]} / Max: {counter[max_key]})"
+                socketio.emit('update_text', {
+                    'title': target_config.get("title"),
+                    'value': display_text
+                })
+        except Exception as e:
+            log.error(f"Link-Fehler für {topic}: {e}")
+
+    try:
         if topic_config:
             topic_type = topic_config.get("type")
             title = topic_config.get("title")
@@ -282,6 +323,10 @@ def reset_counter():
         time_to_sleep = (next_midnight - now).total_seconds()
         time.sleep(time_to_sleep)
 
+        keys_to_delete = [k for k in counter.keys() if k.startswith("stats_")]
+        for k in keys_to_delete:
+            del counter[k]
+
         # Verschiebe "today" zu "yesterday" und setze zurück
         counter["yesterday"] = counter["today"]
         counter["today"] = 0
@@ -459,7 +504,7 @@ def deicing_callback(action, duration, start_time):
             "time": time.strftime("%H:%M", time.localtime(start_time)),
             "elapsed_hours": 0
         }
-        save_values(runtime, "runtime.json")
+        # save_values(runtime, "runtime.json")
 
     elif action == 'stop':
         run_id = f"D{count}"
@@ -507,6 +552,8 @@ if __name__ == '__main__':
         "yesterday": 0,
         "total": 0,
     }
+    counter.setdefault("int_min", 0)
+    counter.setdefault("int_max", 0)
 
     # Zugriff auf die MQTT-Werte mit Typen und anderen Informationen
     mqtt_values = config.get("mqtt_values", {})
