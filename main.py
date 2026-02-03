@@ -316,42 +316,66 @@ def load_values(filename="data.json"):
 
 
 def reset_counter():
+    """
+    Background task to reset daily counters at midnight.
+    """
     while True:
         now = datetime.now()
-        # Warte bis Mitternacht
         next_midnight = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
         time_to_sleep = (next_midnight - now).total_seconds()
+
+        log.info(f"Counter reset scheduled in {time_to_sleep} seconds")
         time.sleep(time_to_sleep)
 
-        keys_to_delete = [k for k in counter.keys() if k.startswith("stats_")]
-        for k in keys_to_delete:
-            del counter[k]
+        try:
+            # --- Handle Min/Max Statistics ---
+            keys_to_handle = [k for k in counter.keys() if k.endswith(("_min", "_max"))]
 
-        # Verschiebe "today" zu "yesterday" und setze zurück
-        counter["yesterday"] = counter["today"]
-        counter["today"] = 0
+            for k in keys_to_handle:
+                # Create a "yesterday" version of the key
+                # internal/temp_min -> internal/temp_yesterday_min
+                suffix = "_yesterday_min" if k.endswith("_min") else "_yesterday_max"
+                base_name = k.rsplit('_', 1)[0]  # removes the '_min' or '_max'
+                yesterday_key = f"{base_name}{suffix}"
 
-        runtime["yesterday"] = runtime["today"]
-        runtime["today"] = 0.0
+                # Store today's extreme value as yesterday's
+                counter[yesterday_key] = counter[k]
 
-        runtime["runs"]["yesterday"] = runtime["runs"]["today"]
-        runtime["runs"]["today"] = {}
+                # Now delete today's key so the new day starts fresh
+                del counter[k]
 
-        # Speichere die Werte
-        save_values(counter, "data.json")
-        save_values(runtime, "runtime.json")
+            # --- Shift Standard Counters ---
+            counter["yesterday"] = counter.get("today", 0)
+            counter["today"] = 0
 
-        rt = {
-            "today": format_runtime(runtime.get("today", 0)),
-            "yesterday": format_runtime(runtime.get("yesterday", 0)),
-            "runs_today": format_runs(runtime.get("runs", {}).get("today", {})),
-            "runs_yesterday": format_runs(runtime.get("runs", {}).get("yesterday", {}))
-        }
+            runtime["yesterday"] = runtime.get("today", 0.0)
+            runtime["today"] = 0.0
 
-        # Sende aktualisierte Werte an die Webseite
-        socketio.emit('update_counter', counter)
-        socketio.emit('update_runtime', rt)
+            # --- Shift Runs Dictionary ---
+            runs = runtime.get("runs", {})
+            runs["yesterday"] = runs.get("today", {})
+            runs["today"] = {}
+            runtime["runs"] = runs
 
+            # --- Save and Emit ---
+            save_values(counter, "data.json")
+            save_values(runtime, "runtime.json")
+
+            rt_payload = {
+                "today": format_runtime(runtime.get("today", 0)),
+                "yesterday": format_runtime(runtime.get("yesterday", 0)),
+                "runs_today": format_runs(runtime.get("runs", {}).get("today", {})),
+                "runs_yesterday": format_runs(runtime.get("runs", {}).get("yesterday", {}))
+            }
+
+            socketio.emit('update_counter', counter)
+            socketio.emit('update_runtime', rt_payload)
+
+            log.info("Daily counters and statistics rotated and reset successfully.")
+
+        except Exception as e:
+            log.error(f"Error during midnight reset: {e}")
+            time.sleep(60)
 
 def format_log_line(line):
     """Formatierung der Log-Zeile mit Farbzuweisung für den Text in [ ] und Zeilenumbrüchen."""
@@ -552,8 +576,6 @@ if __name__ == '__main__':
         "yesterday": 0,
         "total": 0,
     }
-    counter.setdefault("int_min", 0)
-    counter.setdefault("int_max", 0)
 
     # Zugriff auf die MQTT-Werte mit Typen und anderen Informationen
     mqtt_values = config.get("mqtt_values", {})
