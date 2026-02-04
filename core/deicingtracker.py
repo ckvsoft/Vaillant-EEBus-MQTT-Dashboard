@@ -42,7 +42,7 @@ class DeicingTracker:
             self.callback('start', 0, self.start_time)
 
         # Set mode to manual during deicing
-        self.ebus.write_value("700", "OpMode", "0")
+        self.ebus.write_value("700", "OpMode", "off")
 
         self.socketio.emit("update_led", {
             "title": "Enteisen",
@@ -60,7 +60,7 @@ class DeicingTracker:
         self.log.info(f"🧊 Enteisen beendet ({duration / 60:.1f} min)")
 
         # Restore automatic mode
-        self.ebus.write_value("700", "OpMode", "1")
+        self.ebus.write_value("700", "OpMode", "auto")
 
         self.socketio.emit("update_led", {
             "title": "Enteisen",
